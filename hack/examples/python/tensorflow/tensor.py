@@ -47,7 +47,8 @@ import tensorflow as tf
 
 
 def classify(context, event):
-
+    if not FunctionState.done_loading:
+        Helpers.on_import()
     # we're going to need a unique temporary location to handle each event,
     # as we download a file as part of each function invocation
     temp_dir = Helpers.create_temporary_dir(context, event)
@@ -168,11 +169,11 @@ class Helpers(object):
         """
 
         # read the image binary data
-        with tf.gfile.FastGFile(image_path, 'rb') as f:
+        with tf.compat.v1.gfile.FastGFile(image_path, 'rb') as f:
             image_data = f.read()
 
         # run the graph's softmax tensor on the image data
-        with tf.Session(graph=FunctionState.graph) as session:
+        with tf.compat.v1.Session(graph=FunctionState.graph) as session:
             softmax_tensor = session.graph.get_tensor_by_name('softmax:0')
             predictions = session.run(softmax_tensor, {'DecodeJpeg/contents:0': image_data})
             predictions = np.squeeze(predictions)
@@ -224,17 +225,17 @@ class Helpers(object):
         """
 
         # verify that the declared graph def file actually exists
-        if not tf.gfile.Exists(Paths.graph_def_path):
+        if not tf.compat.v1.gfile.Exists(Paths.graph_def_path):
             raise NuclioResponseError('Failed to find graph def file', requests.codes.service_unavailable)
 
         # load the TensorFlow GraphDef
-        with tf.gfile.FastGFile(Paths.graph_def_path, 'rb') as f:
-            graph_def = tf.GraphDef()
+        with tf.compat.v1.gfile.FastGFile(Paths.graph_def_path, 'rb') as f:
+            graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
 
-            tf.import_graph_def(graph_def, name='')
+            tf.compat.v1.import_graph_def(graph_def, name='')
 
-        return tf.get_default_graph()
+        return tf.compat.v1.get_default_graph()
 
     @staticmethod
     def load_node_lookup():
@@ -292,11 +293,11 @@ class Helpers(object):
         """
 
         # verify that the declared label lookup file actually exists
-        if not tf.gfile.Exists(Paths.label_lookup_path):
+        if not tf.compat.v1.gfile.Exists(Paths.label_lookup_path):
             raise NuclioResponseError('Failed to find Label lookup file', requests.codes.service_unavailable)
 
         # load the raw mapping data
-        with tf.gfile.GFile(Paths.label_lookup_path) as f:
+        with tf.compat.v1.gfile.GFile(Paths.label_lookup_path) as f:
             lookup_lines = f.readlines()
 
         result = {}
@@ -326,11 +327,11 @@ class Helpers(object):
         """
 
         # verify that the declared uid lookup file actually exists
-        if not tf.gfile.Exists(Paths.uid_lookup_path):
+        if not tf.compat.v1.gfile.Exists(Paths.uid_lookup_path):
             raise NuclioResponseError('Failed to find UID lookup file', requests.codes.service_unavailable)
 
         # load the raw mapping data
-        with tf.gfile.GFile(Paths.uid_lookup_path) as f:
+        with tf.compat.v1.gfile.GFile(Paths.uid_lookup_path) as f:
             lookup_lines = f.readlines()
 
         result = {}
@@ -366,5 +367,5 @@ class Helpers(object):
 
 # perform the loading in another thread to not block import - the function
 # handler will gracefully decline requests until we're ready to handle them
-t = threading.Thread(target=Helpers.on_import)
-t.start()
+# t = threading.Thread(target=Helpers.on_import)
+# t.start()
