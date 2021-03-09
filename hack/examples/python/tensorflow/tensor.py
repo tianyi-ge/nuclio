@@ -45,57 +45,57 @@ import threading
 import numpy as np
 import tensorflow as tf
 
-
 def classify(context, event):
-    if not FunctionState.done_loading:
-        Helpers.on_import()
+    # if not FunctionState.done_loading:
+    #     Helpers.on_import()
     # we're going to need a unique temporary location to handle each event,
     # as we download a file as part of each function invocation
     temp_dir = Helpers.create_temporary_dir(context, event)
 
     # wrap everything with error handling such that any exception raised
     # at any point will still return a proper response
-    try:
+    # try:
 
-        # if we're not ready to handle this request yet, deny it
-        if not FunctionState.done_loading:
-            context.logger.warn_with('Model data not done loading yet, denying request')
-            raise NuclioResponseError('Model data not loaded yet, cannot serve this request',
-                                      requests.codes.service_unavailable)
+    # if we're not ready to handle this request yet, deny it
+    # if not FunctionState.done_loading:
+    #     context.logger.warn_with('Model data not done loading yet, denying request')
+    #     raise NuclioResponseError('Model data not loaded yet, cannot serve this request',
+    #                                 requests.codes.service_unavailable)
 
-        # read the event's body to determine the target image URL
-        # TODO: in the future this can also take binary image data if provided with an appropriate content-type
-        image_url = event.body.decode('utf-8').strip()
+    # read the event's body to determine the target image URL
+    # TODO: in the future this can also take binary image data if provided with an appropriate content-type
+    image_url = event.body.decode('utf-8').strip()
 
-        # download the image to our temporary location
-        image_target_path = os.path.join(temp_dir, 'downloaded_image.jpg')
-        Helpers.download_file(context, image_url, image_target_path)
+    # download the image to our temporary location
+    image_target_path = os.path.join(temp_dir, 'downloaded_image.jpg')
+    Helpers.on_import()
+    Helpers.download_file(context, image_url, image_target_path)
 
-        # run the inference on the image
-        results = Helpers.run_inference(context, image_target_path, 5, 0.3)
+    # run the inference on the image
+    results = Helpers.run_inference(context, image_target_path, 5, 0.3)
 
-        # return a response with the result
-        return context.Response(body=str(results),
-                                headers={},
-                                content_type='text/plain',
-                                status_code=requests.codes.ok)
+    # return a response with the result
+    return context.Response(body=str(results),
+                            headers={},
+                            content_type='text/plain',
+                            status_code=requests.codes.ok)
 
     # convert any NuclioResponseError to a response to be returned from our handler.
     # the response's description and status will appropriately convey the underlying error's nature
-    except NuclioResponseError as error:
-        return error.as_response(context)
+    # except NuclioResponseError as error:
+    #     return error.as_response(context)
 
-    # if anything we didn't count on happens, respond with internal server error
-    except Exception as error:
-        context.logger.warn_with('Unexpected error occurred, responding with internal server error',
-                                 exc=str(error))
+    # # if anything we didn't count on happens, respond with internal server error
+    # except Exception as error:
+    #     context.logger.warn_with('Unexpected error occurred, responding with internal server error',
+    #                              exc=str(error))
 
-        message = 'Unexpected error occurred: {0}\n{1}'.format(error, traceback.format_exc())
-        return NuclioResponseError(message).as_response(context)
+    #     message = 'Unexpected error occurred: {0}\n{1}'.format(error, traceback.format_exc())
+    #     return NuclioResponseError(message).as_response(context)
 
-    # clean up after ourselves regardless of whether we succeeded or failed
-    finally:
-        shutil.rmtree(temp_dir)
+    # # clean up after ourselves regardless of whether we succeeded or failed
+    # finally:
+    #     shutil.rmtree(temp_dir)
 
 
 class NuclioResponseError(Exception):
@@ -199,7 +199,6 @@ class Helpers(object):
 
             if meets_threshold:
                 results.append((name, score))
-
         return results
 
     @staticmethod
